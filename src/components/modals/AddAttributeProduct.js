@@ -132,10 +132,10 @@ export default function AddAttributeProduct(props) {
                       className="form-label"
                       htmlFor="inputAddAttribute-value"
                     >
-                      Price
+                      Price ($)
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       id="inputAddAttribute-value"
                       className="form-control"
                       onChange={(e) => setPrice(e.target.value)}
@@ -153,7 +153,7 @@ export default function AddAttributeProduct(props) {
                       Inventory
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       id="inputAddAttribute-value"
                       className="form-control"
                       onChange={(e) => setInventory(e.target.value)}
