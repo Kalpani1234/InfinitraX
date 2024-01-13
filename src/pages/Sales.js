@@ -1,78 +1,57 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../layouts/Sidebar";
-import { IoIosAddCircle } from "react-icons/io";
-import Button from "react-bootstrap/Button";
 import { Navbar } from "react-bootstrap";
-
-
-import "../styles/attributes.css";
-import "../App.css";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
+import LocalGroceryStoreIcon from "@mui/icons-material/LocalGroceryStore";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ClearIcon from "@mui/icons-material/Clear";
-
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-
-import AddSalesmodel from "../components/modals/AddSalesmodel";
-import ViewSalesModel from "../components/modals/ViewSalesModel";
-import EditSalesModel from "../components/modals/EditSalesModel";
+import ViewSalesModal from "../components/modals/ViewSalesModal";
 import DeleteConfirmationModal from "../components/modals/confirmationmodal/DeleteConfirmationModal";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer, toast } from "react-toastify";
+import axios from "axios";
+import "../styles/inventory.css";
+import SearchIcon from "@mui/icons-material/Search";
+import SalesModal from "../components/modals/SalesModal";
 
 function Sales() {
-  const [showAdd, setShowAdd] = useState(false);
   const [showView, setShowView] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
+  const [showView2, setShowView2] = useState(false);
+  const [selectedInventory, setSelectedInventory] = useState(null);
 
-  const [selectedSales, setSelectedSales] = useState(null);
-  const [Sales, setSales] = useState([]);
-  const [SalesToDelete, setSalesToDelete] = useState(null);
+  const [inventory, setInventory] = useState([]);
   const [updateTrigger, setUpdateTrigger] = useState(false);
 
+  const [searchTerm3, setSearchTerm3] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [filteredAttributeList, setFilteredAttributeList] = useState([]);
-  const [attributeList, setAttributeList] = useState([]);
-
-  const addSalesModal = () => {
-    setShowAdd(!showAdd);
-  };
-
-  const viewSalesModal = (attributes) => {
-    setSelectedSales(attributes);
-    setShowView(!showView);
-  };
-
-  const editSalesModal = (attributes) => {
-    setSelectedSales(attributes);
-    setShowEdit(!showEdit);
-    fetchData();
-  };
+  const [filteredSalesList, setFilteredSalesList] = useState([]);
+  const [SalesList, setSalesList] = useState([]);
+  const [selectedPriceRange, setSelectedPriceRange] = useState("");
+  const [inventoryDelete, setinventoryDelete] = useState(null);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
 
   const handleStatusChange = (event) => {
     setSelectedStatus(event.target.value);
   };
 
   async function fetchData() {
-    const result = await axios.get("http://127.0.0.1:8000/attribute");
-    setSales(result.data);
-    setAttributeList(result.data);
-  }
-
-  async function deleteAttributeModal(id) {
-    setShowDelete(false);
-    await axios.delete("http://127.0.0.1:8000/attribute/" + id);
-    toast.success("Attribute deleted successfully");
-    fetchData();
+    const result = await axios.get("http://127.0.0.1:8000/inventorydata");
+    setInventory(result.data);
+    setSalesList(result.data);
   }
 
   const handleDelete = async (id) => {
-    setShowDelete(true);
-    setSalesToDelete(id);
+    setConfirmModalVisible(true);
+    setinventoryDelete(id);
   };
+
+  async function deleteInventoryModal(id) {
+    setConfirmModalVisible(false);
+    await axios.delete("http://127.0.0.1:8000/inventorydata/" + id);
+    toast.success("Attribute deleted successfully");
+    fetchData();
+  }
 
   useEffect(() => {
     (async () => await fetchData())();
@@ -82,19 +61,40 @@ function Sales() {
     fetchData();
   }, [updateTrigger]);
 
+  const isPriceInRange = (price, range) => {
+    const [min, max] = range.split("-").map(Number);
+    return price >= min && price <= max;
+  };
+
   useEffect(() => {
-    const filteredData = attributeList.filter(
-      (attribute) =>
-        attribute.attribute.toLowerCase() &&
-        (selectedStatus === "" || attribute.attribute === selectedStatus)
+    const filteredData = SalesList.filter(
+      (inventory) =>
+        inventory.product.toLowerCase().includes(searchTerm3.toLowerCase()) &&
+        (selectedStatus === "" || inventory.attribute === selectedStatus) &&
+        (selectedPriceRange === "" ||
+          isPriceInRange(inventory.price, selectedPriceRange))
     );
-    setFilteredAttributeList(filteredData);
-  }, [selectedStatus, attributeList]);
+    setFilteredSalesList(filteredData);
+  }, [searchTerm3, selectedStatus, selectedPriceRange, SalesList]);
+
+  const inventoryViewModal = (inventory) => {
+    setSelectedInventory(inventory);
+    setShowView(true);
+  };
+
+  const inventoryStockModal = (inventory) => {
+    setSelectedInventory(inventory);
+    setShowView2(true);
+  };
+
+  const handleChange3 = (event) => {
+    setSearchTerm3(event.target.value);
+  };
 
   return (
     <>
-      <div className="Attributes">
-        <Sidebar>
+      <Sidebar>
+        <div className="container">
           <Navbar className="navbar mt-3 m-3 py-1 rounded">
             <div className="container-fluid d-flex align-items-center justify-content-center">
               <span className="navbar-brand mb-0 h1 text-white">
@@ -102,111 +102,155 @@ function Sales() {
               </span>
             </div>
           </Navbar>
-          <div>
-            <div className="container px-3">
-              <div className="row">
-                <div className="col mx-3 p-2 rounded bg-white">
-                  <div className="row">
-                    <div className="col">
-                      <span className="fw-bold">Filter by</span>
-                    </div>
-                    <div className="col">
-                      <select
-                        id="selectFilterByAttribute"
-                        className="form-select"
-                        value={selectedStatus}
-                        onChange={handleStatusChange}
-                      >
-                        <option value={""}>Filter by Sales</option>
-                        <option value={"Color"}>Color</option>
-                        <option value={"Storage"}>Storage</option>
-                        <option value={"Display"}>Display</option>
-                      </select>
-                      {selectedStatus && (
-                        <div
-                          className="search-icon"
-                          style={{
-                            zIndex: "100",
-                            backgroundColor: "white",
-                            right: "18px",
-                          }}
-                          onClick={() => setSelectedStatus("")}
-                        >
-                          <ClearIcon />
-                        </div>
-                      )}
-                    </div>
+
+          <div className="mb-3 Category-FilterSection d-flex">
+            <h5 className="col-1">FilterList</h5>
+            <div className="col-3">
+              <div className="search-input-container mt-4">
+                <form>
+                  <input
+                    className="SearchBox"
+                    type="text"
+                    placeholder="Filter by SerialNo"
+                    value={searchTerm3}
+                    onChange={handleChange3}
+                  />
+                  <div className="search-icon">
+                    <SearchIcon />
                   </div>
-                </div>
-                <div className="col mx-3 p-2 rounded bg-white">
-                  <div className="row">
-                    <div className="col">
-                      <span className="fw-bold">Add Sales</span>
+                  {searchTerm3 && (
+                    <div
+                      className="search-icon si2"
+                      style={{
+                        zIndex: "100",
+                        backgroundColor: "white",
+                        right: "17px",
+                      }}
+                      onClick={() => setSearchTerm3("")}
+                    >
+                      <ClearIcon />
                     </div>
-                    <div className="col">
-                      <Button variant="success" onClick={addSalesModal}>
-                        Add Sales <IoIosAddCircle />
-                      </Button>
-                    </div>
+                  )}
+                </form>
+              </div>
+            </div>
+            <div className="col-4">
+              {" "}
+              <div className="search-input-container mt-4 m-5">
+                <select
+                  className="SearchBox"
+                  value={selectedStatus}
+                  onChange={handleStatusChange}
+                >
+                  <option value={""}>Select an Attribute</option>
+                  <option value={"Color"}>Color</option>
+                  <option value={"Storage"}>Storage</option>
+                  <option value={"Display"}>Display</option>
+                </select>
+
+                {selectedStatus && (
+                  <div
+                    className="search-icon"
+                    style={{
+                      zIndex: "100",
+                      backgroundColor: "white",
+                      right: "20px",
+                    }}
+                    onClick={() => setSelectedStatus("")}
+                  >
+                    <ClearIcon />
                   </div>
-                </div>
+                )}
+              </div>
+            </div>
+            <div className="col-3">
+              {" "}
+              <div className="search-input-container mt-4">
+                <form>
+                  <select
+                    className="SearchBox"
+                    value={selectedPriceRange}
+                    onChange={(e) => setSelectedPriceRange(e.target.value)}
+                  >
+                    <option value="">Select Price Range</option>
+                    <option value="1-100">$1 - $100</option>
+                    <option value="100-1000">$100 - $1000</option>
+                    <option value="1000-10000">$1000 - $10000</option>
+                    <option value="10000-1000000">$10000 - $1000000</option>
+                  </select>
+                </form>
               </div>
             </div>
           </div>
-          <div className="container mt-3">
-            <Navbar className="navbar bg-white mb-3 mx-1 py-1 rounded">
-              <div className="container-fluid">
-                <p className="navbar-brand fw-bold">Sales List</p>
-              </div>
-            </Navbar>
-            <div className="Attribute-TableSection">
-              <table className="table table-striped table-hover">
-                <thead className="top-0 position-sticky z-1">
-                  <tr>
-                  <th scope="col" className="col-1">
-                    No
-                  </th>
-                  <th scope="col" className="col-1">
-                    Product
-                  </th>
-                  <th scope="col" className="col-1">
-                    Quantity
-                  </th>
-                  <th scope="col" className="col-1">
-                    Value
-                  </th>
-                  <th scope="col" className="col-1">
-                    Price
-                  </th>
-                  <th scope="col" className="col-1">
-                    Action
-                  </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAttributeList.length > 0 ? (
-                    filteredAttributeList.map((data, i) => {
-                      return (
+          <div className="Product-Main-Section">
+            <div className="container mt-3">
+              <Navbar className="navbar bg-white mb-3 mx-1 py-1 rounded ">
+                <div className="container-fluid Sales-section">
+                  <h5 className="navbar-brand">Sales List</h5>
+                </div>
+              </Navbar>
+              <div className="Inventory-TableSection">
+                <table className="table table-striped table-hover">
+                  <thead className="top-0 position-sticky z-1">
+                    <tr>
+                      <th scope="col" className="col-1">
+                        No
+                      </th>
+                      <th scope="col" className="col-2">
+                        Product SerialNo
+                      </th>
+                      <th scope="col" className="col-1">
+                        Attribute
+                      </th>
+                      <th scope="col" className="col-1">
+                        Value
+                      </th>
+                      <th scope="col" className="col-1">
+                        Inventory
+                      </th>
+                      <th scope="col" className="col-1">
+                        Price
+                      </th>
+                      <th scope="col" className="col-1">
+                        Taxrate
+                      </th>
+                      <th scope="col" className="col-2">
+                        Selling Price
+                      </th>
+                      <th scope="col" className="col-2">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSalesList.length > 0 ? (
+                      filteredSalesList.map((data, i) => (
                         <tr key={i}>
                           <th scope="row">{i + 1}</th>
                           <td>{data.product}</td>
-                          <td>{data.quantity}</td>
+                          <td>{data.attribute}</td>
                           <td>{data.value}</td>
-                          <td>{data.price}</td>
+                          <td>{data.inventory}</td>
+                          <td>${data.price}</td>
+                          <td>{data.taxrate}</td>
+                          <td>
+                            $
+                            {(data.price * (1 + data.taxrate / 100)).toFixed(2)}
+                          </td>
                           <td>
                             <IconButton
-                              aria-label="delete"
+                              aria-label="view"
                               className="viewbutt"
-                              onClick={() => viewSalesModal(data)}
+                              onClick={() => inventoryViewModal(data)}
                             >
                               <VisibilityIcon className="text-" />
                             </IconButton>
                             <IconButton
-                              aria-label="delete"
+                              aria-label="edit"
                               className="viewbutt"
-                              onClick={() => editSalesModal(data)}
+                              onClick={() => inventoryStockModal(data)}
                             >
-                              <EditIcon className="text-success" />
+                              <LocalGroceryStoreIcon className="text-success" />
                             </IconButton>
                             <IconButton
                               aria-label="delete"
@@ -217,42 +261,39 @@ function Sales() {
                             </IconButton>
                           </td>
                         </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="7">No results found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="9">No results found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <ToastContainer />
             </div>
-            <ToastContainer />
+
+            <ViewSalesModal
+              show={showView}
+              onHide={() => setShowView(false)}
+              salesDetails={selectedInventory}
+            />
+            <SalesModal
+              show={showView2}
+              onHide={() => {
+                setShowView2(false);
+                setUpdateTrigger(!updateTrigger);
+              }}
+              salesDetails={selectedInventory}
+            />
+            <DeleteConfirmationModal
+              show={confirmModalVisible}
+              onHide={() => setConfirmModalVisible(false)}
+              onConfirm={() => deleteInventoryModal(inventoryDelete)}
+            />
           </div>
-          <AddSalesmodel
-            show={showAdd}
-            onHide={() => addSalesModal(false)}
-          />
-          <ViewSalesModel
-            show={showView}
-            onHide={() => viewSalesModal(false)}
-            SalesDetails={selectedSales}
-          />
-          <EditSalesModel
-            show={showEdit}
-            onHide={() => {
-              editSalesModal(false);
-              setUpdateTrigger(!updateTrigger);
-            }}
-            SalesDetails={selectedSales}
-          />
-          <DeleteConfirmationModal
-            show={showDelete}
-            onHide={() => setShowDelete(false)}
-            onConfirm={() => deleteAttributeModal(SalesToDelete)}
-          />
-        </Sidebar>
-      </div>
+        </div>
+      </Sidebar>
     </>
   );
 }
